@@ -14,10 +14,10 @@ import spotipy.util as util
 data_limit = 50     # int from 1 to 50
 
 # Constants and inits
-client_id = '27d397bcdc2e4e36a3fedac7941e296a'
-client_secret = '45f086c32eb14a91961b698ccf10fa06'
+client_id = ''
+client_secret = ''
 redirect_uri = 'http://localhost:8888'
-username = 'dpalme-mx'
+username = ''
 scope = """user-library-read, user-top-read, playlist-read-private,
            playlist-modify-public, playlist-modify-private, user-follow-read"""
 
