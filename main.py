@@ -10,11 +10,13 @@ for year in range(2021, 2022):
                 wp.albums.values()
             ),
             key=lambda a: a['added_date']
-            ):
+    ):
         for track in album['tracks']:
             if track in wp.tracks and str(year) not in wp.tracks[track]['added_date']:
                 break
         else:
-            print(str(album["name"]))
-            print(' - ')
-            print(f'{", ".join(ar["name"] for ar in album["artists"].values())}\n')
+            print(
+                str(album["name"]),
+                '-',
+                f'{", ".join(ar["name"] for ar in album["artists"].values())}'
+            )
