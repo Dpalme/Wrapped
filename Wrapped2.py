@@ -1,4 +1,6 @@
 import itertools
+
+from six import print_
 import spotipy_auth
 import json
 import concurrent.futures
@@ -23,15 +25,25 @@ class Wrapped(object):
             self.artists = database['artists']
         except FileNotFoundError:
             self.update()
+        
+    def get_data_by_id(self, fn, ids):
+        ids = set(ids)
+        n = len(ids) if len(ids) < 20 else 20
+        with concurrent.futures.ThreadPoolExecutor(n) as ex:
+            return (
+                req.result()
+                for req in concurrent.futures.as_completed(
+                    {ex.submit(fn, _id) for _id in ids})
+            )
 
-    def get_data(self, fn):
+    def get_chained_data(self, fn):
         reqs = range(0, fn(limit=1)['total'], DATA_LIMIT)
         n = len(reqs) if len(reqs) < 50 else 50
         with concurrent.futures.ThreadPoolExecutor(n) as ex:
-            return tuple(itertools.chain.from_iterable(
+            return itertools.chain.from_iterable(
                 req.result()['items']
                 for req in concurrent.futures.as_completed(
-                    {ex.submit(fn, DATA_LIMIT, n): n for n in reqs})))
+                    {ex.submit(fn, DATA_LIMIT, n): n for n in reqs}))
 
     def get_saved_albums(self):
         self.albums = {a['album']['id']: {
@@ -53,7 +65,8 @@ class Wrapped(object):
                     'name': t['name'],
                     'id': t['id']}
                  for t in a['album']['tracks']['items']}}
-            for a in self.get_data(self.sp.current_user_saved_albums)}
+            for a in self.get_chained_data(self.sp.current_user_saved_albums)}
+        print(len(self.albums), 'albums')
         return self.albums
 
     def get_playlists(self):
@@ -66,7 +79,8 @@ class Wrapped(object):
                     'display_name': p['owner']['display_name'],
                     'uri': p['owner']['uri']
                 }}
-            for p in self.get_data(self.sp.current_user_playlists)}
+            for p in self.get_chained_data(self.sp.current_user_playlists)}
+        print(len(self.playlists), 'playlists')
         return self.playlists
 
     def get_tracks(self):
@@ -77,36 +91,32 @@ class Wrapped(object):
             "release_date": t['track']['album']['release_date'],
             'added_date': t['added_at'],
             "isrc": t['track']['external_ids']['isrc'],
-            "artists": [
+            "artists": 
                 {ar['id']: {
                     'name': ar['name'],
                     'id': ar['id'],
                     'uri': ar['uri']}
-                 for ar in t['track']['artists']}],
+                 for ar in t['track']['artists']},
             "album": {
                 'uri': t['track']['album']['uri'],
                 'id': t['track']['album']['id'],
                 'name': t['track']['album']['name']}
-        } for t in self.get_data(self.sp.current_user_saved_tracks)}
+        } for t in self.get_chained_data(self.sp.current_user_saved_tracks)}
+        print(len(self.tracks), 'tracks')
         return self.tracks
 
     def get_artists(self):
-        artists = {}
-        for track in self.tracks.values():
-            for a in track['artists']:
-                uri = tuple(a.keys())[0]
-                track = {track['id']: {
-                    'id': track['id'],
-                    'name': track['name']}}
-                if uri in artists:
-                    artists[uri]['tracks'].append(track)
-                else:
-                    artists[uri] = {
-                        'id': uri,
-                        'name': a[uri]['name'],
-                        'tracks': [track]
-                    }
-        self.artists = artists
+        self.artists = {a['id']: {
+            "name": a['name'],
+            "id": a['id'],
+            "popularity": a['popularity'],
+            "uri": a['uri'],
+            'genres': a['genres'],
+            "followers": a['followers']['total']
+        } for a in self.get_data_by_id(
+            self.sp.artist,
+            {artist for album in self.albums.values() for artist in album['artists']})}
+        print(len(self.artists), 'artists')
         return self.artists
 
     def update(self):
