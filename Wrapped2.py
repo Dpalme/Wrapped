@@ -24,7 +24,7 @@ class Wrapped():
         except FileNotFoundError:
             self.update()
 
-    def get_grouped_by_id(self, fn, ids, property_name=None):
+    def get_grouped_by_id(self, fn, ids, property_name=None, **kwargs):
         ids = tuple(set(ids))
         groupings = tuple(ids[(i*50):(i*50)+50]
                           for i in range((len(ids)//50) + 1))
@@ -33,27 +33,27 @@ class Wrapped():
             return itertools.chain.from_iterable(
                 req.result()[property_name] if property_name else req.result()
                 for req in concurrent.futures.as_completed(
-                    {ex.submit(fn, group) for group in groupings})
+                    {ex.submit(fn, group, **kwargs) for group in groupings})
             )
 
-    def get_data_by_id(self, fn, ids):
+    def get_data_by_id(self, fn, ids, **kwargs):
         ids = set(ids)
         n = len(ids) if len(ids) < 20 else 20
         with concurrent.futures.ThreadPoolExecutor(n) as ex:
             return (
                 req.result()
                 for req in concurrent.futures.as_completed(
-                    {ex.submit(fn, _id) for _id in ids})
+                    {ex.submit(fn, _id, **kwargs) for _id in ids})
             )
 
-    def get_chained_data(self, fn):
-        reqs = range(0, fn(limit=1)['total'], DATA_LIMIT)
+    def get_chained_data(self, fn, *args, **kwargs):
+        reqs = range(0, fn(*args, **kwargs, limit=1)['total'], DATA_LIMIT)
         n = len(reqs) if len(reqs) < 50 else 50
         with concurrent.futures.ThreadPoolExecutor(n) as ex:
             return itertools.chain.from_iterable(
                 req.result()['items']
                 for req in concurrent.futures.as_completed(
-                    {ex.submit(fn, DATA_LIMIT, n): n for n in reqs}))
+                    {ex.submit(fn, *args, **kwargs, limit=DATA_LIMIT, offset=n): n for n in reqs}))
 
     def get_albums(self):
         self.albums = {a['album']['id']: {
