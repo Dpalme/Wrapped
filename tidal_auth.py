@@ -3,13 +3,12 @@ import tidalapi
 
 class Tidal(object):
     def __init__(self) -> None:
-        pass
         self.td: tidalapi.Session = tidalapi.Session()
         try:
             with open('.cache-tidal', 'r') as cache:
                 self.td.load_oauth_session(**eval(cache.read()))
         except FileNotFoundError:
-            link, future = td.login_oauth()
+            link, future = self.td.login_oauth()
             print(link.verification_uri_complete)
             future.result()
             if self.td.check_login():
@@ -23,3 +22,4 @@ class Tidal(object):
             else:
                 print("Error with login")
                 exit(1)
+        return self.td

@@ -1,10 +1,9 @@
 import tidal_auth
-import Wrapped2
+import wrapped
 import concurrent.futures
 
-td = tidal_auth.Tidal().td
-tidal_auth.tidalapi.Album.id
-wp = Wrapped2.Wrapped()
+td = tidal_auth.Tidal()
+wp = wrapped.Wrapped()
 
 
 def get_data_by_id(fn, ids, *args, **kwargs):
